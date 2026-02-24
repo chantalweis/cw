@@ -5,130 +5,156 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Broschüre</title>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <style>
-    html, body { height: 100%; }
-    body {
-      margin: 0;
-      background: #111;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      color: #fff;
+    html, body { height: 100%; margin: 0; }
+    body{
+      background:#111;
+      color:#fff;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
     }
-    .wrap {
-      width: min(980px, 100%);
-      padding: 16px;
-      box-sizing: border-box;
+    .wrap{ width:min(980px, 100%); padding:16px; box-sizing:border-box; }
+    canvas{
+      width:100%;
+      height:auto;
+      display:block;
+      background:#fff;
+      border-radius:10px;
+      box-shadow:0 12px 40px rgba(0,0,0,.45);
     }
-    canvas {
-      width: 100%;
-      height: auto;
-      display: block;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-    }
-    .controls {
+    .controls{
       position: sticky;
       bottom: 12px;
       margin-top: 12px;
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      align-items: center;
-      background: rgba(0,0,0,0.65);
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      align-items:center;
+      background: rgba(0,0,0,.65);
       backdrop-filter: blur(8px);
-      padding: 10px 14px;
-      border-radius: 999px;
+      padding:10px 14px;
+      border-radius:999px;
+      z-index: 10;
     }
-    button {
-      background: #fff;
-      border: 0;
-      padding: 8px 14px;
-      border-radius: 999px;
-      cursor: pointer;
-      font-weight: 600;
+    button{
+      background:#fff;
+      border:0;
+      padding:8px 14px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:700;
     }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-    .counter { font-variant-numeric: tabular-nums; }
+    button:disabled{ opacity:.4; cursor:not-allowed; }
+    .counter{ font-variant-numeric: tabular-nums; }
+    .error{
+      margin-top:12px;
+      padding:12px;
+      background:#2a0000;
+      border:1px solid #5a0000;
+      border-radius:10px;
+      display:none;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
-
 <body>
   <div class="wrap">
-    <canvas id="pdf-render"></canvas>
+    <canvas id="pdf"></canvas>
 
     <div class="controls">
       <button id="prev">◀</button>
-      <div class="counter"><span id="page-num">1</span> / <span id="page-count">?</span></div>
+      <div class="counter"><span id="p">1</span> / <span id="n">?</span></div>
       <button id="next">▶</button>
     </div>
+
+    <div class="error" id="err"></div>
   </div>
 
   <script>
-    // ✅ HIER ist dein Dateiname eingetragen:
-    const url = 'broschuere_cleaning_station_chantal_weis.pdf';
+    // ⚠️ Dateiname exakt wie im Repo (inkl. .pdf):
+    const PDF_FILE = 'broschuere_cleaning_station_chantal_weis.pdf';
+
+    // ✅ Worker setzen (sonst klappt Rendern oft nicht zuverlässig)
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
     let pdfDoc = null;
     let pageNum = 1;
 
-    const canvas = document.getElementById('pdf-render');
+    const canvas = document.getElementById('pdf');
     const ctx = canvas.getContext('2d');
 
     const prevBtn = document.getElementById('prev');
     const nextBtn = document.getElementById('next');
-    const pageNumEl = document.getElementById('page-num');
-    const pageCountEl = document.getElementById('page-count');
+    const pEl = document.getElementById('p');
+    const nEl = document.getElementById('n');
+    const errEl = document.getElementById('err');
 
-    function getScaleForViewport(page) {
-      // Skaliert so, dass es auf Handy & Desktop gut aussieht
-      const viewport = page.getViewport({ scale: 1 });
-      const containerWidth = Math.min(980, window.innerWidth) - 32; // wrap padding
-      return Math.min(2.2, Math.max(1.1, containerWidth / viewport.width));
+    function showErr(msg){
+      errEl.style.display = 'block';
+      errEl.textContent = msg;
     }
 
-    async function renderPage(num) {
+    function getScale(page){
+      const viewport1 = page.getViewport({ scale: 1 });
+      const containerWidth = Math.min(980, window.innerWidth) - 32;
+      const s = containerWidth / viewport1.width;
+      return Math.min(2.4, Math.max(1.0, s));
+    }
+
+    async function render(num){
       const page = await pdfDoc.getPage(num);
-      const scale = getScaleForViewport(page);
-      const viewport = page.getViewport({ scale });
+      const viewport = page.getViewport({ scale: getScale(page) });
 
       canvas.width = Math.floor(viewport.width);
       canvas.height = Math.floor(viewport.height);
 
       await page.render({ canvasContext: ctx, viewport }).promise;
 
-      pageNumEl.textContent = num;
-      prevBtn.disabled = (num <= 1);
-      nextBtn.disabled = (num >= pdfDoc.numPages);
+      pEl.textContent = num;
+      prevBtn.disabled = num <= 1;
+      nextBtn.disabled = num >= pdfDoc.numPages;
     }
 
-    pdfjsLib.getDocument(url).promise.then(async (pdf) => {
-      pdfDoc = pdf;
-      pageCountEl.textContent = pdf.numPages;
-      await renderPage(pageNum);
-    }).catch((err) => {
-      document.body.innerHTML = '<div style="padding:24px;color:#fff;">PDF konnte nicht geladen werden. Prüfe Dateinamen (inkl. .pdf) und ob die Datei im Repo liegt.</div>';
-      console.error(err);
-    });
+    (async () => {
+      try{
+        // Cache-bust, damit GitHub Pages nicht die alte PDF cached:
+        const url = PDF_FILE + '?v=' + Date.now();
+
+        pdfDoc = await pdfjsLib.getDocument(url).promise;
+        nEl.textContent = pdfDoc.numPages;
+        await render(pageNum);
+
+      }catch(e){
+        showErr(
+          "PDF konnte nicht geladen werden.\n" +
+          "Check 1: Liegt die Datei im Repo-Root neben index.html?\n" +
+          "Check 2: Dateiname exakt (Groß/Klein) + .pdf?\n\n" +
+          "Fehler: " + e
+        );
+        console.error(e);
+      }
+    })();
 
     prevBtn.addEventListener('click', async () => {
-      if (pageNum <= 1) return;
+      if(pageNum <= 1) return;
       pageNum--;
-      await renderPage(pageNum);
+      await render(pageNum);
     });
 
     nextBtn.addEventListener('click', async () => {
-      if (pageNum >= pdfDoc.numPages) return;
+      if(!pdfDoc || pageNum >= pdfDoc.numPages) return;
       pageNum++;
-      await renderPage(pageNum);
+      await render(pageNum);
     });
 
     window.addEventListener('resize', () => {
-      if (!pdfDoc) return;
-      renderPage(pageNum);
+      if(pdfDoc) render(pageNum);
     });
   </script>
 </body>
