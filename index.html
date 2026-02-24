@@ -18,24 +18,28 @@
     align-items:flex-start;
   }
   .wrap{
-    width:min(1200px, 100%);
-    padding:20px;
-    box-sizing:border-box;
+    width: min(1400px, 100%);
+    padding: 14px;
+    box-sizing: border-box;
   }
   .stage{
     display:flex;
     justify-content:center;
+    align-items:flex-start;
   }
   canvas{
     display:block;
     background:#fff;
     border-radius:12px;
     box-shadow:0 20px 50px rgba(0,0,0,0.6);
+    /* wichtig: Canvas soll sich an den Screen anpassen */
+    max-width: 100%;
+    max-height: calc(100vh - 140px);
   }
   .controls{
     position: sticky;
-    bottom: 20px;
-    margin-top: 16px;
+    bottom: 14px;
+    margin-top: 14px;
     display:flex;
     gap:12px;
     justify-content:center;
@@ -74,7 +78,7 @@
 
 <script>
   // ✅ Dateiname exakt wie im Repo:
-  const PDF_FILE = 'broschuere_cleaning_station_chantal_weis.pdf?v=4';
+  const PDF_FILE = 'broschuere_cleaning_station_chantal_weis.pdf?v=5';
 
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -93,21 +97,16 @@
   function getScale(page){
     const v1 = page.getViewport({ scale: 1 });
 
-    const containerMaxWidth = Math.min(1200, window.innerWidth) - 40; // wrap padding
-    const containerMaxHeight = window.innerHeight - 190; // controls + margins
+    // so groß wie möglich auf dem Screen:
+    const maxWidth = Math.min(1400, window.innerWidth) - 28; // wrap padding
+    const maxHeight = window.innerHeight - 170;              // Controls + Luft
 
-    const isPortrait = v1.height > v1.width;
+    const scaleByWidth = maxWidth / v1.width;
+    const scaleByHeight = maxHeight / v1.height;
 
-    // Doppelseiten (quer) dürfen fit-to-width machen
-    // Einzelseiten (hoch) werden nicht unbegrenzt hochskaliert
-    const portraitMaxWidth = Math.min(720, containerMaxWidth); // <- hier steuert man "Cover nicht zu groß"
-
-    const targetWidth = isPortrait ? portraitMaxWidth : containerMaxWidth;
-
-    const scaleByWidth = targetWidth / v1.width;
-    const scaleByHeight = containerMaxHeight / v1.height;
-
-    return Math.min(scaleByWidth, scaleByHeight, 2.6);
+    // "fit inside" => nimmt den kleineren Wert, damit es komplett sichtbar bleibt
+    // cap hoch, damit es scharf bleibt (Render ist ohnehin HiDPI):
+    return Math.min(scaleByWidth, scaleByHeight, 4.0);
   }
 
   async function renderPage(num){
@@ -116,8 +115,19 @@
     const scale = getScale(page);
     const viewport = page.getViewport({ scale });
 
-    canvas.width = Math.floor(viewport.width);
-    canvas.height = Math.floor(viewport.height);
+    // ✅ HiDPI/Retina-Schärfe:
+    const dpr = window.devicePixelRatio || 1;
+
+    // Canvas-Bitmap in echter Auflösung
+    canvas.width  = Math.floor(viewport.width * dpr);
+    canvas.height = Math.floor(viewport.height * dpr);
+
+    // Canvas im Layout in "normaler" Größe anzeigen
+    canvas.style.width  = Math.floor(viewport.width) + "px";
+    canvas.style.height = Math.floor(viewport.height) + "px";
+
+    // Kontext auf DPR skalieren (wichtig für Schärfe)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     await page.render({ canvasContext: ctx, viewport }).promise;
 
