@@ -1,15 +1,135 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>broschuere_cleaning_station_chantal_weis</title>
+  <title>Broschüre</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+
   <style>
-    html, body { height: 100%; margin: 0; background: #111; }
-    iframe { width: 100%; height: 100%; border: none; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      color: #fff;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .wrap {
+      width: min(980px, 100%);
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+    }
+    .controls {
+      position: sticky;
+      bottom: 12px;
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(8px);
+      padding: 10px 14px;
+      border-radius: 999px;
+    }
+    button {
+      background: #fff;
+      border: 0;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .counter { font-variant-numeric: tabular-nums; }
   </style>
 </head>
+
 <body>
-  <iframe src="broschuere_cleaning_station_chantal_weis.pdf"></iframe>
+  <div class="wrap">
+    <canvas id="pdf-render"></canvas>
+
+    <div class="controls">
+      <button id="prev">◀</button>
+      <div class="counter"><span id="page-num">1</span> / <span id="page-count">?</span></div>
+      <button id="next">▶</button>
+    </div>
+  </div>
+
+  <script>
+    // ✅ HIER ist dein Dateiname eingetragen:
+    const url = 'broschuere_cleaning_station_chantal_weis.pdf';
+
+    let pdfDoc = null;
+    let pageNum = 1;
+
+    const canvas = document.getElementById('pdf-render');
+    const ctx = canvas.getContext('2d');
+
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const pageNumEl = document.getElementById('page-num');
+    const pageCountEl = document.getElementById('page-count');
+
+    function getScaleForViewport(page) {
+      // Skaliert so, dass es auf Handy & Desktop gut aussieht
+      const viewport = page.getViewport({ scale: 1 });
+      const containerWidth = Math.min(980, window.innerWidth) - 32; // wrap padding
+      return Math.min(2.2, Math.max(1.1, containerWidth / viewport.width));
+    }
+
+    async function renderPage(num) {
+      const page = await pdfDoc.getPage(num);
+      const scale = getScaleForViewport(page);
+      const viewport = page.getViewport({ scale });
+
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      pageNumEl.textContent = num;
+      prevBtn.disabled = (num <= 1);
+      nextBtn.disabled = (num >= pdfDoc.numPages);
+    }
+
+    pdfjsLib.getDocument(url).promise.then(async (pdf) => {
+      pdfDoc = pdf;
+      pageCountEl.textContent = pdf.numPages;
+      await renderPage(pageNum);
+    }).catch((err) => {
+      document.body.innerHTML = '<div style="padding:24px;color:#fff;">PDF konnte nicht geladen werden. Prüfe Dateinamen (inkl. .pdf) und ob die Datei im Repo liegt.</div>';
+      console.error(err);
+    });
+
+    prevBtn.addEventListener('click', async () => {
+      if (pageNum <= 1) return;
+      pageNum--;
+      await renderPage(pageNum);
+    });
+
+    nextBtn.addEventListener('click', async () => {
+      if (pageNum >= pdfDoc.numPages) return;
+      pageNum++;
+      await renderPage(pageNum);
+    });
+
+    window.addEventListener('resize', () => {
+      if (!pdfDoc) return;
+      renderPage(pageNum);
+    });
+  </script>
 </body>
 </html>
