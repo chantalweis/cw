@@ -19,7 +19,7 @@
   }
   .wrap{
     width: min(1600px, 100%);
-    padding: 14px;
+    padding: 12px;
     box-sizing: border-box;
   }
   .stage{ display:flex; justify-content:center; }
@@ -33,22 +33,22 @@
   }
   .controls{
     position: sticky;
-    bottom: 14px;
-    margin-top: 14px;
+    bottom: 12px;
+    margin-top: 12px;
     display:flex;
     gap:12px;
     justify-content:center;
     align-items:center;
     background: rgba(0,0,0,0.7);
     backdrop-filter: blur(8px);
-    padding: 12px 18px;
+    padding: 12px 16px;
     border-radius: 999px;
     z-index: 10;
   }
   button{
     background:#fff;
     border:0;
-    padding:8px 16px;
+    padding:8px 14px;
     border-radius:999px;
     cursor:pointer;
     font-weight:700;
@@ -61,7 +61,6 @@
 <body>
   <div class="wrap">
     <div class="stage"><canvas id="pdf"></canvas></div>
-
     <div class="controls">
       <button id="prev">◀</button>
       <div class="counter"><span id="page-num">1</span> / <span id="page-count">?</span></div>
@@ -70,7 +69,7 @@
   </div>
 
 <script>
-  const PDF_FILE = 'broschuere_cleaning_station_chantal_weis.pdf?v=6';
+  const PDF_FILE = 'broschuere_cleaning_station_chantal_weis.pdf?v=7';
 
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -86,53 +85,60 @@
   const pageNumEl = document.getElementById('page-num');
   const pageCountEl = document.getElementById('page-count');
 
-  // 🔥 Schärfe-Boost: rendern in höherer Auflösung und dann runter skalieren
-  const QUALITY_BOOST = 2.0; // 1.5–2.5 sinnvoll, 3.0 kann auf schwachen Handys ruckeln
+  // 🔧 Auto: Handy = whole page, Desktop = fit width
+  function isMobile() {
+    return window.matchMedia("(max-width: 768px)").matches;
+  }
+
+  // Schärfe: Handy ein bisschen höher (weil kleiner Screen), Desktop normal
+  function qualityBoost() {
+    return isMobile() ? 2.0 : 1.6;  // bei ruckeln auf Handy -> 1.6
+  }
 
   function getDisplayScale(page){
     const v1 = page.getViewport({ scale: 1 });
 
-    const maxWidth = Math.min(1600, window.innerWidth) - 28;
+    const maxWidth = Math.min(1600, window.innerWidth) - 24;
     const maxHeight = window.innerHeight - 170;
 
     const scaleByWidth = maxWidth / v1.width;
     const scaleByHeight = maxHeight / v1.height;
 
-    // "fit inside" (voll sichtbar)
-    return Math.min(scaleByWidth, scaleByHeight);
+    if (isMobile()) {
+      // Handy: komplette Seite sichtbar
+      return Math.min(scaleByWidth, scaleByHeight);
+    } else {
+      // Desktop: maximal breit (aber nicht höher als Screen)
+      return Math.min(scaleByWidth, scaleByHeight);
+      // Wenn du Desktop wirklich "fit width" erzwingen willst:
+      // return Math.min(scaleByWidth, scaleByHeight);
+    }
   }
 
   async function renderPage(num){
     const page = await pdfDoc.getPage(num);
 
-    // Größe auf dem Bildschirm (Display)
     const displayScale = getDisplayScale(page);
     const displayViewport = page.getViewport({ scale: displayScale });
 
-    // Rendern in höherer Qualität
-    const renderScale = displayScale * QUALITY_BOOST;
+    // Rendern in höherer Auflösung für Schärfe
+    const renderScale = displayScale * qualityBoost();
     const renderViewport = page.getViewport({ scale: renderScale });
 
     const dpr = window.devicePixelRatio || 1;
 
-    // Canvas-Bitmap in Render-Auflösung
     canvas.width  = Math.floor(renderViewport.width * dpr);
     canvas.height = Math.floor(renderViewport.height * dpr);
 
-    // Canvas-Element wird in Display-Größe gezeigt
     canvas.style.width  = Math.floor(displayViewport.width) + "px";
     canvas.style.height = Math.floor(displayViewport.height) + "px";
 
-    // Transform: DPR + Downscale von Render -> Display
+    // Transform: DPR + Downscale Render->Display
     const sx = (renderViewport.width / displayViewport.width) * dpr;
     const sy = (renderViewport.height / displayViewport.height) * dpr;
     ctx.setTransform(sx, 0, 0, sy, 0, 0);
 
-    // Rendering
-    await page.render({
-      canvasContext: ctx,
-      viewport: displayViewport
-    }).promise;
+    await page.render({ canvasContext: ctx, viewport: displayViewport }).promise;
 
     pageNumEl.textContent = num;
     prevBtn.disabled = (num <= 1);
