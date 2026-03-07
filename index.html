@@ -1,178 +1,323 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Broschüre</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Broschüre</title>
 
-<style>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-}
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #111;
+      font-family: Arial, sans-serif;
+    }
 
-html,body{
-width:100%;
-height:100%;
-overflow:hidden;
-background:#111;
-font-family:Arial, sans-serif;
-}
+    .viewer {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
 
-.viewer{
-width:100vw;
-height:100vh;
-display:flex;
-overflow-x:auto;
-scroll-snap-type:x mandatory;
--webkit-overflow-scrolling:touch;
-scroll-behavior:smooth;
-}
+    .viewer::-webkit-scrollbar {
+      display: none;
+    }
 
-.viewer::-webkit-scrollbar{
-display:none;
-}
+    .page {
+      flex: 0 0 100vw;
+      width: 100vw;
+      height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px 22px;
+      overflow: hidden;
+      position: relative;
+    }
 
-.page{
-flex:0 0 100vw;
-width:100vw;
-height:100vh;
-scroll-snap-align:start;
-display:flex;
-align-items:center;
-justify-content:center;
-padding:10px;
-}
+    .zoom-container {
+      width: calc(100vw - 44px);
+      height: calc(100vh - 36px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      border-radius: 10px;
+    }
 
-.zoom-container{
-width:100%;
-height:100%;
-display:flex;
-align-items:center;
-justify-content:center;
-overflow:hidden;
-touch-action:none;
-}
+    .zoom-container img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transform-origin: center center;
+      user-select: none;
+      -webkit-user-drag: none;
+      transition: transform 0.05s linear;
+    }
 
-.zoom-container img{
-max-width:100%;
-max-height:100%;
-object-fit:contain;
-transform-origin:center center;
-transition:transform 0.1s;
-user-select:none;
--webkit-user-drag:none;
-}
+    .counter {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+      z-index: 20;
+    }
 
-.counter{
-position:fixed;
-bottom:18px;
-left:50%;
-transform:translateX(-50%);
-background:rgba(0,0,0,0.6);
-color:white;
-padding:8px 14px;
-border-radius:20px;
-font-size:14px;
-}
+    .nav-btn {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 42px;
+      height: 42px;
+      border: none;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.45);
+      color: white;
+      font-size: 24px;
+      line-height: 1;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+      cursor: pointer;
+    }
 
-</style>
+    .nav-btn.left {
+      left: 10px;
+    }
+
+    .nav-btn.right {
+      right: 10px;
+    }
+
+    .hint {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.45);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      z-index: 20;
+      transition: opacity 0.4s ease;
+    }
+
+    .hint.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @media (min-width: 900px) {
+      .page {
+        padding: 28px 70px;
+      }
+
+      .zoom-container {
+        width: calc(100vw - 140px);
+        height: calc(100vh - 56px);
+      }
+    }
+  </style>
 </head>
-
 <body>
 
-<div class="viewer" id="viewer">
+  <div class="hint" id="hint">Mittig wischen oder Pfeile tippen</div>
 
-<div class="page"><div class="zoom-container"><img src="seite__Seite_01.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_02.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_03.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_04.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_05.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_06.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_07.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_08.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_09.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_10.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_11.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_12.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_13.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_14.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_15.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_16.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_17.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_18.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_19.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_20.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_21.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_22.jpg"></div></div>
+  <button class="nav-btn left" id="prevBtn" aria-label="Vorherige Seite">‹</button>
+  <button class="nav-btn right" id="nextBtn" aria-label="Nächste Seite">›</button>
 
-</div>
+  <div class="viewer" id="viewer">
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_01.jpg" alt="Seite 1"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_02.jpg" alt="Seite 2"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_03.jpg" alt="Seite 3"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_04.jpg" alt="Seite 4"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_05.jpg" alt="Seite 5"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_06.jpg" alt="Seite 6"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_07.jpg" alt="Seite 7"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_08.jpg" alt="Seite 8"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_09.jpg" alt="Seite 9"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_10.jpg" alt="Seite 10"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_11.jpg" alt="Seite 11"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_12.jpg" alt="Seite 12"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_13.jpg" alt="Seite 13"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_14.jpg" alt="Seite 14"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_15.jpg" alt="Seite 15"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_16.jpg" alt="Seite 16"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_17.jpg" alt="Seite 17"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_18.jpg" alt="Seite 18"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_19.jpg" alt="Seite 19"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_20.jpg" alt="Seite 20"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_21.jpg" alt="Seite 21"></div></div>
+    <div class="page"><div class="zoom-container"><img src="seite__Seite_22.jpg" alt="Seite 22"></div></div>
+  </div>
 
-<div class="counter" id="counter">1 / 22</div>
+  <div class="counter" id="counter">1 / 22</div>
 
-<script>
+  <script>
+    const viewer = document.getElementById("viewer");
+    const counter = document.getElementById("counter");
+    const containers = document.querySelectorAll(".zoom-container");
+    const totalPages = 22;
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const hint = document.getElementById("hint");
 
-const viewer = document.getElementById("viewer")
-const counter = document.getElementById("counter")
+    function getCurrentPage() {
+      return Math.round(viewer.scrollLeft / window.innerWidth);
+    }
 
-viewer.addEventListener("scroll", () => {
+    function updateCounter() {
+      const page = getCurrentPage() + 1;
+      counter.textContent = page + " / " + totalPages;
+    }
 
-let page = Math.round(viewer.scrollLeft / window.innerWidth) + 1
-counter.innerText = page + " / 22"
+    function goToPage(pageIndex) {
+      const clamped = Math.max(0, Math.min(totalPages - 1, pageIndex));
+      viewer.scrollTo({
+        left: clamped * window.innerWidth,
+        behavior: "smooth"
+      });
+    }
 
-})
+    prevBtn.addEventListener("click", () => goToPage(getCurrentPage() - 1));
+    nextBtn.addEventListener("click", () => goToPage(getCurrentPage() + 1));
 
-document.querySelectorAll(".zoom-container").forEach(container => {
+    viewer.addEventListener("scroll", updateCounter);
+    window.addEventListener("resize", updateCounter);
+    updateCounter();
 
-let scale = 1
-let startDistance = 0
+    viewer.addEventListener("touchstart", () => hint.classList.add("hide"), { once: true });
+    prevBtn.addEventListener("click", () => hint.classList.add("hide"), { once: true });
+    nextBtn.addEventListener("click", () => hint.classList.add("hide"), { once: true });
+    setTimeout(() => hint.classList.add("hide"), 3500);
 
-container.addEventListener("wheel", e => {
+    containers.forEach(container => {
+      const img = container.querySelector("img");
 
-e.preventDefault()
+      let scale = 1;
+      let startScale = 1;
+      let translateX = 0;
+      let translateY = 0;
 
-scale += e.deltaY * -0.001
-scale = Math.min(Math.max(.8, scale), 4)
+      let startX = 0;
+      let startY = 0;
+      let baseTranslateX = 0;
+      let baseTranslateY = 0;
 
-container.style.transform = `scale(${scale})`
+      let pinchStartDistance = 0;
+      let isDragging = false;
 
-})
+      function applyTransform() {
+        img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+      }
 
-container.addEventListener("touchstart", e => {
+      function resetTransform() {
+        scale = 1;
+        translateX = 0;
+        translateY = 0;
+        applyTransform();
+      }
 
-if(e.touches.length === 2){
+      function clampTranslation() {
+        const rect = container.getBoundingClientRect();
+        const imgWidth = img.offsetWidth * scale;
+        const imgHeight = img.offsetHeight * scale;
 
-startDistance = Math.hypot(
-e.touches[0].pageX - e.touches[1].pageX,
-e.touches[0].pageY - e.touches[1].pageY
-)
+        const maxX = Math.max(0, (imgWidth - rect.width) / 2);
+        const maxY = Math.max(0, (imgHeight - rect.height) / 2);
 
-}
+        if (translateX > maxX) translateX = maxX;
+        if (translateX < -maxX) translateX = -maxX;
+        if (translateY > maxY) translateY = maxY;
+        if (translateY < -maxY) translateY = -maxY;
+      }
 
-})
+      function getDistance(t1, t2) {
+        const dx = t2.clientX - t1.clientX;
+        const dy = t2.clientY - t1.clientY;
+        return Math.hypot(dx, dy);
+      }
 
-container.addEventListener("touchmove", e => {
+      container.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        scale += e.deltaY * -0.001;
+        scale = Math.min(Math.max(1, scale), 4);
 
-if(e.touches.length === 2){
+        if (scale === 1) {
+          resetTransform();
+        } else {
+          clampTranslation();
+          applyTransform();
+        }
+      }, { passive: false });
 
-let newDistance = Math.hypot(
-e.touches[0].pageX - e.touches[1].pageX,
-e.touches[0].pageY - e.touches[1].pageY
-)
+      container.addEventListener("touchstart", (e) => {
+        if (e.touches.length === 2) {
+          pinchStartDistance = getDistance(e.touches[0], e.touches[1]);
+          startScale = scale;
+        } else if (e.touches.length === 1 && scale > 1) {
+          isDragging = true;
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          baseTranslateX = translateX;
+          baseTranslateY = translateY;
+        }
+      }, { passive: true });
 
-let zoom = newDistance / startDistance
+      container.addEventListener("touchmove", (e) => {
+        if (e.touches.length === 2) {
+          const currentDistance = getDistance(e.touches[0], e.touches[1]);
+          scale = startScale * (currentDistance / pinchStartDistance);
+          scale = Math.min(Math.max(1, scale), 4);
 
-container.style.transform = `scale(${zoom})`
+          if (scale === 1) {
+            translateX = 0;
+            translateY = 0;
+          }
 
-}
+          clampTranslation();
+          applyTransform();
+          e.preventDefault();
+        } else if (e.touches.length === 1 && scale > 1 && isDragging) {
+          translateX = baseTranslateX + (e.touches[0].clientX - startX);
+          translateY = baseTranslateY + (e.touches[0].clientY - startY);
+          clampTranslation();
+          applyTransform();
+          e.preventDefault();
+        }
+      }, { passive: false });
 
-})
-
-})
-
-</script>
+      container.addEventListener("touchend", () => {
+        if (scale <= 1) {
+          resetTransform();
+        }
+        isDragging = false;
+      });
+    });
+  </script>
 
 </body>
 </html>
