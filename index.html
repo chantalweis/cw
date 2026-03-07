@@ -1,171 +1,450 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Broschüre</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Broschüre</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0f0f10;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
 
-<style>
-  html, body { height: 100%; margin: 0; }
-  body{
-    background:#111;
-    color:#fff;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    display:flex;
-    justify-content:center;
-    align-items:flex-start;
-  }
-  .wrap{
-    width: min(1600px, 100%);
-    padding: 12px;
-    box-sizing: border-box;
-  }
-  .stage{ display:flex; justify-content:center; }
-  canvas{
-    display:block;
-    background:#fff;
-    border-radius:12px;
-    box-shadow:0 20px 50px rgba(0,0,0,0.6);
-    max-width: 100%;
-    max-height: calc(100vh - 140px);
-  }
-  .controls{
-    position: sticky;
-    bottom: 12px;
-    margin-top: 12px;
-    display:flex;
-    gap:12px;
-    justify-content:center;
-    align-items:center;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(8px);
-    padding: 12px 16px;
-    border-radius: 999px;
-    z-index: 10;
-  }
-  button{
-    background:#fff;
-    border:0;
-    padding:8px 14px;
-    border-radius:999px;
-    cursor:pointer;
-    font-weight:700;
-  }
-  button:disabled{ opacity:.4; cursor:not-allowed; }
-  .counter{ font-variant-numeric: tabular-nums; }
-</style>
+    .viewer {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+
+    .viewer::-webkit-scrollbar {
+      display: none;
+    }
+
+    .page {
+      flex: 0 0 100vw;
+      width: 100vw;
+      height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow: hidden;
+      position: relative;
+      background: #0f0f10;
+    }
+
+    .zoom-wrap {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      touch-action: none;
+      position: relative;
+      cursor: grab;
+    }
+
+    .zoom-wrap.dragging {
+      cursor: grabbing;
+    }
+
+    .zoom-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transform-origin: center center;
+      will-change: transform;
+      user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none;
+    }
+
+    .counter {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.55);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 14px;
+      z-index: 30;
+      backdrop-filter: blur(8px);
+    }
+
+    .hint {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.45);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      z-index: 30;
+      backdrop-filter: blur(8px);
+      transition: opacity 0.4s ease;
+    }
+
+    .hint.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .nav-btn {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 48px;
+      height: 48px;
+      border: none;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.45);
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 30;
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-btn.left {
+      left: 14px;
+    }
+
+    .nav-btn.right {
+      right: 14px;
+    }
+
+    .nav-btn:hover {
+      background: rgba(0,0,0,0.65);
+    }
+
+    .loading {
+      position: fixed;
+      inset: 0;
+      background: #0f0f10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      font-size: 16px;
+      transition: opacity 0.35s ease;
+    }
+
+    .loading.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @media (max-width: 900px) {
+      .nav-btn {
+        display: none;
+      }
+    }
+  </style>
 </head>
-
 <body>
-  <div class="wrap">
-    <div class="stage"><canvas id="pdf"></canvas></div>
-    <div class="controls">
-      <button id="prev">◀</button>
-      <div class="counter"><span id="page-num">1</span> / <span id="page-count">?</span></div>
-      <button id="next">▶</button>
-    </div>
+  <div class="loading" id="loading">Broschüre lädt …</div>
+  <div class="hint" id="hint">Wischen oder doppeltippen zum Zoomen</div>
+
+  <button class="nav-btn left" id="prevBtn" aria-label="Vorherige Seite">‹</button>
+  <button class="nav-btn right" id="nextBtn" aria-label="Nächste Seite">›</button>
+
+  <div class="viewer" id="viewer">
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_01.jpg" alt="Seite 1"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_02.jpg" alt="Seite 2"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_03.jpg" alt="Seite 3"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_04.jpg" alt="Seite 4"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_05.jpg" alt="Seite 5"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_06.jpg" alt="Seite 6"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_07.jpg" alt="Seite 7"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_08.jpg" alt="Seite 8"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_09.jpg" alt="Seite 9"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_10.jpg" alt="Seite 10"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_11.jpg" alt="Seite 11"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_12.jpg" alt="Seite 12"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_13.jpg" alt="Seite 13"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_14.jpg" alt="Seite 14"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_15.jpg" alt="Seite 15"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_16.jpg" alt="Seite 16"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_17.jpg" alt="Seite 17"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_18.jpg" alt="Seite 18"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_19.jpg" alt="Seite 19"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_20.jpg" alt="Seite 20"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_21.jpg" alt="Seite 21"></div></div>
+    <div class="page"><div class="zoom-wrap"><img class="zoom-image" src="seiten/seite__Seite_22.jpg" alt="Seite 22"></div></div>
   </div>
 
-<script>
-  const PDF_FILE = 'broschuere_cleaning_station_chantal_weis.pdf?v=7';
+  <div class="counter" id="counter">1 / 22</div>
 
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  <script>
+    const viewer = document.getElementById("viewer");
+    const counter = document.getElementById("counter");
+    const hint = document.getElementById("hint");
+    const loading = document.getElementById("loading");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const pages = [...document.querySelectorAll(".page")];
+    const totalPages = pages.length;
 
-  let pdfDoc = null;
-  let pageNum = 1;
+    let currentPage = 0;
 
-  const canvas = document.getElementById('pdf');
-  const ctx = canvas.getContext('2d', { alpha: false });
-
-  const prevBtn = document.getElementById('prev');
-  const nextBtn = document.getElementById('next');
-  const pageNumEl = document.getElementById('page-num');
-  const pageCountEl = document.getElementById('page-count');
-
-  // 🔧 Auto: Handy = whole page, Desktop = fit width
-  function isMobile() {
-    return window.matchMedia("(max-width: 768px)").matches;
-  }
-
-  // Schärfe: Handy ein bisschen höher (weil kleiner Screen), Desktop normal
-  function qualityBoost() {
-    return isMobile() ? 2.0 : 1.6;  // bei ruckeln auf Handy -> 1.6
-  }
-
-  function getDisplayScale(page){
-    const v1 = page.getViewport({ scale: 1 });
-
-    const maxWidth = Math.min(1600, window.innerWidth) - 24;
-    const maxHeight = window.innerHeight - 170;
-
-    const scaleByWidth = maxWidth / v1.width;
-    const scaleByHeight = maxHeight / v1.height;
-
-    if (isMobile()) {
-      // Handy: komplette Seite sichtbar
-      return Math.min(scaleByWidth, scaleByHeight);
-    } else {
-      // Desktop: maximal breit (aber nicht höher als Screen)
-      return Math.min(scaleByWidth, scaleByHeight);
-      // Wenn du Desktop wirklich "fit width" erzwingen willst:
-      // return Math.min(scaleByWidth, scaleByHeight);
+    function updateCounter() {
+      currentPage = Math.round(viewer.scrollLeft / window.innerWidth);
+      counter.textContent = `${currentPage + 1} / ${totalPages}`;
     }
-  }
 
-  async function renderPage(num){
-    const page = await pdfDoc.getPage(num);
+    function goToPage(index) {
+      const clamped = Math.max(0, Math.min(totalPages - 1, index));
+      viewer.scrollTo({
+        left: clamped * window.innerWidth,
+        behavior: "smooth"
+      });
+    }
 
-    const displayScale = getDisplayScale(page);
-    const displayViewport = page.getViewport({ scale: displayScale });
+    prevBtn.addEventListener("click", () => goToPage(currentPage - 1));
+    nextBtn.addEventListener("click", () => goToPage(currentPage + 1));
 
-    // Rendern in höherer Auflösung für Schärfe
-    const renderScale = displayScale * qualityBoost();
-    const renderViewport = page.getViewport({ scale: renderScale });
+    viewer.addEventListener("scroll", updateCounter);
+    window.addEventListener("resize", updateCounter);
 
-    const dpr = window.devicePixelRatio || 1;
+    viewer.addEventListener("touchstart", () => hint.classList.add("hide"), { once: true });
+    viewer.addEventListener("mousedown", () => hint.classList.add("hide"), { once: true });
 
-    canvas.width  = Math.floor(renderViewport.width * dpr);
-    canvas.height = Math.floor(renderViewport.height * dpr);
+    setTimeout(() => hint.classList.add("hide"), 3500);
 
-    canvas.style.width  = Math.floor(displayViewport.width) + "px";
-    canvas.style.height = Math.floor(displayViewport.height) + "px";
+    const images = document.querySelectorAll(".zoom-image");
+    let loaded = 0;
 
-    // Transform: DPR + Downscale Render->Display
-    const sx = (renderViewport.width / displayViewport.width) * dpr;
-    const sy = (renderViewport.height / displayViewport.height) * dpr;
-    ctx.setTransform(sx, 0, 0, sy, 0, 0);
+    images.forEach(img => {
+      const done = () => {
+        loaded++;
+        if (loaded >= 1) loading.classList.add("hide");
+      };
+      if (img.complete) done();
+      else {
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
+      }
+    });
 
-    await page.render({ canvasContext: ctx, viewport: displayViewport }).promise;
+    pages.forEach(page => {
+      const wrap = page.querySelector(".zoom-wrap");
+      const img = page.querySelector(".zoom-image");
 
-    pageNumEl.textContent = num;
-    prevBtn.disabled = (num <= 1);
-    nextBtn.disabled = (num >= pdfDoc.numPages);
-  }
+      let scale = 1;
+      let startScale = 1;
+      let translateX = 0;
+      let translateY = 0;
+      let startX = 0;
+      let startY = 0;
+      let pointerStartX = 0;
+      let pointerStartY = 0;
+      let isDragging = false;
 
-  (async () => {
-    pdfDoc = await pdfjsLib.getDocument(PDF_FILE).promise;
-    pageCountEl.textContent = pdfDoc.numPages;
-    await renderPage(pageNum);
-  })();
+      let pinchStartDistance = 0;
+      let pinchMidX = 0;
+      let pinchMidY = 0;
 
-  prevBtn.addEventListener('click', async () => {
-    if(pageNum <= 1) return;
-    pageNum--;
-    await renderPage(pageNum);
-  });
+      let lastTap = 0;
 
-  nextBtn.addEventListener('click', async () => {
-    if(pageNum >= pdfDoc.numPages) return;
-    pageNum++;
-    await renderPage(pageNum);
-  });
+      function applyTransform() {
+        img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+      }
 
-  window.addEventListener('resize', () => {
-    if(pdfDoc) renderPage(pageNum);
-  });
-</script>
+      function resetZoom(animated = true) {
+        scale = 1;
+        translateX = 0;
+        translateY = 0;
+        if (animated) img.style.transition = "transform 0.25s ease";
+        applyTransform();
+        setTimeout(() => {
+          img.style.transition = "";
+        }, 250);
+        viewer.style.overflowX = "auto";
+      }
+
+      function clampTranslate() {
+        const maxX = ((img.clientWidth * scale) - wrap.clientWidth) / 2;
+        const maxY = ((img.clientHeight * scale) - wrap.clientHeight) / 2;
+
+        if (maxX > 0) {
+          translateX = Math.max(-maxX, Math.min(maxX, translateX));
+        } else {
+          translateX = 0;
+        }
+
+        if (maxY > 0) {
+          translateY = Math.max(-maxY, Math.min(maxY, translateY));
+        } else {
+          translateY = 0;
+        }
+      }
+
+      function getDistance(t1, t2) {
+        return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      }
+
+      function getMidpoint(t1, t2) {
+        return {
+          x: (t1.clientX + t2.clientX) / 2,
+          y: (t1.clientY + t2.clientY) / 2
+        };
+      }
+
+      wrap.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        if (scale === 1) {
+          scale = 2.2;
+          translateX = 0;
+          translateY = 0;
+          clampTranslate();
+          img.style.transition = "transform 0.25s ease";
+          applyTransform();
+          setTimeout(() => img.style.transition = "", 250);
+          viewer.style.overflowX = "hidden";
+        } else {
+          resetZoom(true);
+        }
+      });
+
+      wrap.addEventListener("wheel", (e) => {
+        e.preventDefault();
+
+        const delta = -e.deltaY * 0.0015;
+        const newScale = Math.max(1, Math.min(4, scale + delta));
+
+        if (newScale === 1) {
+          resetZoom(false);
+          return;
+        }
+
+        scale = newScale;
+        clampTranslate();
+        applyTransform();
+        viewer.style.overflowX = scale > 1 ? "hidden" : "auto";
+      }, { passive: false });
+
+      wrap.addEventListener("pointerdown", (e) => {
+        if (scale <= 1) return;
+        isDragging = true;
+        wrap.classList.add("dragging");
+        pointerStartX = e.clientX;
+        pointerStartY = e.clientY;
+        startX = translateX;
+        startY = translateY;
+      });
+
+      window.addEventListener("pointermove", (e) => {
+        if (!isDragging || scale <= 1) return;
+        translateX = startX + (e.clientX - pointerStartX);
+        translateY = startY + (e.clientY - pointerStartY);
+        clampTranslate();
+        applyTransform();
+      });
+
+      window.addEventListener("pointerup", () => {
+        isDragging = false;
+        wrap.classList.remove("dragging");
+      });
+
+      wrap.addEventListener("touchstart", (e) => {
+        const now = Date.now();
+        if (e.touches.length === 1 && now - lastTap < 280) {
+          if (scale === 1) {
+            scale = 2.2;
+            translateX = 0;
+            translateY = 0;
+            viewer.style.overflowX = "hidden";
+          } else {
+            scale = 1;
+            translateX = 0;
+            translateY = 0;
+            viewer.style.overflowX = "auto";
+          }
+          img.style.transition = "transform 0.25s ease";
+          applyTransform();
+          setTimeout(() => img.style.transition = "", 250);
+          e.preventDefault();
+        }
+        lastTap = now;
+
+        if (e.touches.length === 2) {
+          pinchStartDistance = getDistance(e.touches[0], e.touches[1]);
+          startScale = scale;
+          const midpoint = getMidpoint(e.touches[0], e.touches[1]);
+          pinchMidX = midpoint.x;
+          pinchMidY = midpoint.y;
+          viewer.style.overflowX = "hidden";
+        }
+      }, { passive: false });
+
+      wrap.addEventListener("touchmove", (e) => {
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          const newDistance = getDistance(e.touches[0], e.touches[1]);
+          const pinchRatio = newDistance / pinchStartDistance;
+          scale = Math.max(1, Math.min(4, startScale * pinchRatio));
+          clampTranslate();
+          applyTransform();
+          viewer.style.overflowX = scale > 1 ? "hidden" : "auto";
+        } else if (e.touches.length === 1 && scale > 1) {
+          e.preventDefault();
+          const touch = e.touches[0];
+          if (!isDragging) {
+            isDragging = true;
+            startX = translateX;
+            startY = translateY;
+            pointerStartX = touch.clientX;
+            pointerStartY = touch.clientY;
+          }
+          translateX = startX + (touch.clientX - pointerStartX);
+          translateY = startY + (touch.clientY - pointerStartY);
+          clampTranslate();
+          applyTransform();
+        }
+      }, { passive: false });
+
+      wrap.addEventListener("touchend", () => {
+        isDragging = false;
+        if (scale <= 1) {
+          resetZoom(false);
+        } else {
+          clampTranslate();
+          applyTransform();
+        }
+      });
+
+      window.addEventListener("resize", () => {
+        clampTranslate();
+        applyTransform();
+      });
+    });
+
+    updateCounter();
+  </script>
 </body>
 </html>
