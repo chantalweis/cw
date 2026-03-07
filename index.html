@@ -1,324 +1,150 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Broschüre</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Broschüre</title>
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #111;
-      font-family: Arial, sans-serif;
-    }
+<style>
 
-    .viewer {
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      overflow-x: auto;
-      overflow-y: hidden;
-      scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch;
-      scroll-behavior: smooth;
-    }
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
 
-    .viewer::-webkit-scrollbar {
-      display: none;
-    }
+html,body{
+width:100%;
+height:100%;
+overflow:hidden;
+background:#111;
+font-family:Arial, sans-serif;
+}
 
-    .page {
-      flex: 0 0 100vw;
-      width: 100vw;
-      height: 100vh;
-      scroll-snap-align: start;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px 56px; /* hier ist der Abstand links/rechts */
-      position: relative;
-      overflow: hidden;
-    }
+.viewer{
+width:100vw;
+height:100vh;
+display:flex;
+overflow-x:auto;
+scroll-snap-type:x mandatory;
+-webkit-overflow-scrolling:touch;
+scroll-behavior:smooth;
+}
 
-    .zoom-container {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      background: #111;
-      border-radius: 12px;
-    }
+.viewer::-webkit-scrollbar{
+display:none;
+}
 
-    .zoom-container img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-      transform-origin: center center;
-      user-select: none;
-      -webkit-user-drag: none;
-      transition: transform 0.05s linear;
-    }
+.page{
+flex:0 0 100vw;
+width:100vw;
+height:100vh;
+scroll-snap-align:start;
+display:flex;
+align-items:center;
+justify-content:center;
+overflow:hidden;
+}
 
-    .counter {
-      position: fixed;
-      bottom: 18px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.65);
-      color: white;
-      padding: 8px 14px;
-      border-radius: 999px;
-      font-size: 14px;
-      z-index: 50;
-    }
+.zoom-container{
+width:100%;
+height:100%;
+display:flex;
+align-items:center;
+justify-content:center;
+overflow:hidden;
+}
 
-    .nav-btn {
-      position: fixed;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 52px;
-      height: 52px;
-      border: none;
-      border-radius: 999px;
-      background: rgba(0,0,0,0.72);
-      color: #fff;
-      font-size: 30px;
-      display: flex;              /* sichtbar */
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      cursor: pointer;
-      line-height: 1;
-    }
+.zoom-container img{
+width:100%;
+height:100%;
+object-fit:contain;
+transform-origin:center center;
+user-select:none;
+-webkit-user-drag:none;
+}
 
-    .nav-left {
-      left: 10px;
-    }
+.counter{
+position:fixed;
+bottom:18px;
+left:50%;
+transform:translateX(-50%);
+background:rgba(0,0,0,0.6);
+color:white;
+padding:8px 14px;
+border-radius:20px;
+font-size:14px;
+z-index:20;
+}
 
-    .nav-right {
-      right: 10px;
-    }
+/* unsichtbare Safari-Zurück Blocker */
 
-    .nav-btn:active {
-      transform: translateY(-50%) scale(0.97);
-    }
+.edge-block{
+position:fixed;
+top:0;
+height:100vh;
+width:70px;
+z-index:30;
+}
 
-    .hint {
-      position: fixed;
-      top: 18px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.65);
-      color: white;
-      padding: 8px 14px;
-      border-radius: 999px;
-      font-size: 13px;
-      z-index: 60;
-    }
+.edge-left{
+left:0;
+}
 
-    @media (max-width: 768px) {
-      .page {
-        padding: 24px 44px;
-      }
+.edge-right{
+right:0;
+}
 
-      .nav-btn {
-        width: 46px;
-        height: 46px;
-        font-size: 26px;
-      }
-
-      .nav-left {
-        left: 6px;
-      }
-
-      .nav-right {
-        right: 6px;
-      }
-    }
-  </style>
+</style>
 </head>
+
 <body>
 
-  <div class="hint">Mit Pfeilen tippen oder mittig wischen</div>
+<div class="edge-block edge-left"></div>
+<div class="edge-block edge-right"></div>
 
-  <button class="nav-btn nav-left" id="prevBtn" type="button">‹</button>
-  <button class="nav-btn nav-right" id="nextBtn" type="button">›</button>
+<div class="viewer" id="viewer">
 
-  <div class="viewer" id="viewer">
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_01.jpg" alt="Seite 1"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_02.jpg" alt="Seite 2"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_03.jpg" alt="Seite 3"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_04.jpg" alt="Seite 4"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_05.jpg" alt="Seite 5"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_06.jpg" alt="Seite 6"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_07.jpg" alt="Seite 7"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_08.jpg" alt="Seite 8"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_09.jpg" alt="Seite 9"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_10.jpg" alt="Seite 10"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_11.jpg" alt="Seite 11"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_12.jpg" alt="Seite 12"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_13.jpg" alt="Seite 13"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_14.jpg" alt="Seite 14"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_15.jpg" alt="Seite 15"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_16.jpg" alt="Seite 16"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_17.jpg" alt="Seite 17"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_18.jpg" alt="Seite 18"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_19.jpg" alt="Seite 19"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_20.jpg" alt="Seite 20"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_21.jpg" alt="Seite 21"></div></div>
-    <div class="page"><div class="zoom-container"><img src="seite__Seite_22.jpg" alt="Seite 22"></div></div>
-  </div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_01.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_02.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_03.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_04.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_05.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_06.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_07.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_08.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_09.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_10.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_11.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_12.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_13.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_14.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_15.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_16.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_17.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_18.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_19.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_20.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_21.jpg"></div></div>
+<div class="page"><div class="zoom-container"><img src="seite__Seite_22.jpg"></div></div>
 
-  <div class="counter" id="counter">1 / 22</div>
+</div>
 
-  <script>
-    const viewer = document.getElementById("viewer");
-    const counter = document.getElementById("counter");
-    const prevBtn = document.getElementById("prevBtn");
-    const nextBtn = document.getElementById("nextBtn");
-    const totalPages = 22;
+<div class="counter" id="counter">1 / 22</div>
 
-    function currentPageIndex() {
-      return Math.round(viewer.scrollLeft / window.innerWidth);
-    }
+<script>
 
-    function updateCounter() {
-      counter.textContent = `${currentPageIndex() + 1} / ${totalPages}`;
-    }
+const viewer = document.getElementById("viewer")
+const counter = document.getElementById("counter")
 
-    function goToPage(index) {
-      const target = Math.max(0, Math.min(totalPages - 1, index));
-      viewer.scrollTo({
-        left: target * window.innerWidth,
-        behavior: "smooth"
-      });
-    }
+viewer.addEventListener("scroll", () => {
 
-    prevBtn.addEventListener("click", () => {
-      goToPage(currentPageIndex() - 1);
-    });
+let page = Math.round(viewer.scrollLeft / window.innerWidth) + 1
+counter.innerText = page + " / 22"
 
-    nextBtn.addEventListener("click", () => {
-      goToPage(currentPageIndex() + 1);
-    });
+})
 
-    viewer.addEventListener("scroll", updateCounter);
-    window.addEventListener("resize", updateCounter);
-    updateCounter();
+</script>
 
-    const containers = document.querySelectorAll(".zoom-container");
-
-    containers.forEach(container => {
-      const img = container.querySelector("img");
-
-      let scale = 1;
-      let startScale = 1;
-      let translateX = 0;
-      let translateY = 0;
-      let startX = 0;
-      let startY = 0;
-      let baseTranslateX = 0;
-      let baseTranslateY = 0;
-      let pinchStartDistance = 0;
-      let isDragging = false;
-
-      function applyTransform() {
-        img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-      }
-
-      function resetTransform() {
-        scale = 1;
-        translateX = 0;
-        translateY = 0;
-        applyTransform();
-      }
-
-      function clampTranslation() {
-        const rect = container.getBoundingClientRect();
-        const imgWidth = img.offsetWidth * scale;
-        const imgHeight = img.offsetHeight * scale;
-
-        const maxX = Math.max(0, (imgWidth - rect.width) / 2);
-        const maxY = Math.max(0, (imgHeight - rect.height) / 2);
-
-        if (translateX > maxX) translateX = maxX;
-        if (translateX < -maxX) translateX = -maxX;
-        if (translateY > maxY) translateY = maxY;
-        if (translateY < -maxY) translateY = -maxY;
-      }
-
-      function getDistance(t1, t2) {
-        const dx = t2.clientX - t1.clientX;
-        const dy = t2.clientY - t1.clientY;
-        return Math.hypot(dx, dy);
-      }
-
-      container.addEventListener("wheel", (e) => {
-        e.preventDefault();
-        scale += e.deltaY * -0.001;
-        scale = Math.min(Math.max(1, scale), 4);
-
-        if (scale === 1) {
-          resetTransform();
-        } else {
-          clampTranslation();
-          applyTransform();
-        }
-      }, { passive: false });
-
-      container.addEventListener("touchstart", (e) => {
-        if (e.touches.length === 2) {
-          pinchStartDistance = getDistance(e.touches[0], e.touches[1]);
-          startScale = scale;
-        } else if (e.touches.length === 1 && scale > 1) {
-          isDragging = true;
-          startX = e.touches[0].clientX;
-          startY = e.touches[0].clientY;
-          baseTranslateX = translateX;
-          baseTranslateY = translateY;
-        }
-      }, { passive: true });
-
-      container.addEventListener("touchmove", (e) => {
-        if (e.touches.length === 2) {
-          const currentDistance = getDistance(e.touches[0], e.touches[1]);
-          scale = startScale * (currentDistance / pinchStartDistance);
-          scale = Math.min(Math.max(1, scale), 4);
-
-          if (scale === 1) {
-            translateX = 0;
-            translateY = 0;
-          }
-
-          clampTranslation();
-          applyTransform();
-          e.preventDefault();
-        } else if (e.touches.length === 1 && scale > 1 && isDragging) {
-          translateX = baseTranslateX + (e.touches[0].clientX - startX);
-          translateY = baseTranslateY + (e.touches[0].clientY - startY);
-          clampTranslation();
-          applyTransform();
-          e.preventDefault();
-        }
-      }, { passive: false });
-
-      container.addEventListener("touchend", () => {
-        if (scale <= 1) {
-          resetTransform();
-        }
-        isDragging = false;
-      });
-    });
-  </script>
 </body>
 </html>
