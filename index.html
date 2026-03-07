@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Broschüre</title>
-
   <style>
     * {
       margin: 0;
@@ -44,20 +43,20 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 18px 22px;
-      overflow: hidden;
+      padding: 24px 56px; /* hier ist der Abstand links/rechts */
       position: relative;
+      overflow: hidden;
     }
 
     .zoom-container {
-      width: calc(100vw - 44px);
-      height: calc(100vh - 36px);
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      position: relative;
-      border-radius: 10px;
+      background: #111;
+      border-radius: 12px;
     }
 
     .zoom-container img {
@@ -75,40 +74,43 @@
       bottom: 18px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.65);
       color: white;
       padding: 8px 14px;
-      border-radius: 20px;
+      border-radius: 999px;
       font-size: 14px;
-      z-index: 20;
+      z-index: 50;
     }
 
     .nav-btn {
       position: fixed;
       top: 50%;
       transform: translateY(-50%);
-      width: 42px;
-      height: 42px;
+      width: 52px;
+      height: 52px;
       border: none;
       border-radius: 999px;
-      background: rgba(0,0,0,0.45);
-      color: white;
-      font-size: 24px;
-      line-height: 1;
-      z-index: 30;
-      display: flex;
+      background: rgba(0,0,0,0.72);
+      color: #fff;
+      font-size: 30px;
+      display: flex;              /* sichtbar */
       align-items: center;
       justify-content: center;
-      backdrop-filter: blur(6px);
+      z-index: 100;
       cursor: pointer;
+      line-height: 1;
     }
 
-    .nav-btn.left {
+    .nav-left {
       left: 10px;
     }
 
-    .nav-btn.right {
+    .nav-right {
       right: 10px;
+    }
+
+    .nav-btn:active {
+      transform: translateY(-50%) scale(0.97);
     }
 
     .hint {
@@ -116,38 +118,41 @@
       top: 18px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.45);
+      background: rgba(0,0,0,0.65);
       color: white;
       padding: 8px 14px;
       border-radius: 999px;
       font-size: 13px;
-      z-index: 20;
-      transition: opacity 0.4s ease;
+      z-index: 60;
     }
 
-    .hint.hide {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    @media (min-width: 900px) {
+    @media (max-width: 768px) {
       .page {
-        padding: 28px 70px;
+        padding: 24px 44px;
       }
 
-      .zoom-container {
-        width: calc(100vw - 140px);
-        height: calc(100vh - 56px);
+      .nav-btn {
+        width: 46px;
+        height: 46px;
+        font-size: 26px;
+      }
+
+      .nav-left {
+        left: 6px;
+      }
+
+      .nav-right {
+        right: 6px;
       }
     }
   </style>
 </head>
 <body>
 
-  <div class="hint" id="hint">Mittig wischen oder Pfeile tippen</div>
+  <div class="hint">Mit Pfeilen tippen oder mittig wischen</div>
 
-  <button class="nav-btn left" id="prevBtn" aria-label="Vorherige Seite">‹</button>
-  <button class="nav-btn right" id="nextBtn" aria-label="Nächste Seite">›</button>
+  <button class="nav-btn nav-left" id="prevBtn" type="button">‹</button>
+  <button class="nav-btn nav-right" id="nextBtn" type="button">›</button>
 
   <div class="viewer" id="viewer">
     <div class="page"><div class="zoom-container"><img src="seite__Seite_01.jpg" alt="Seite 1"></div></div>
@@ -179,40 +184,39 @@
   <script>
     const viewer = document.getElementById("viewer");
     const counter = document.getElementById("counter");
-    const containers = document.querySelectorAll(".zoom-container");
-    const totalPages = 22;
     const prevBtn = document.getElementById("prevBtn");
     const nextBtn = document.getElementById("nextBtn");
-    const hint = document.getElementById("hint");
+    const totalPages = 22;
 
-    function getCurrentPage() {
+    function currentPageIndex() {
       return Math.round(viewer.scrollLeft / window.innerWidth);
     }
 
     function updateCounter() {
-      const page = getCurrentPage() + 1;
-      counter.textContent = page + " / " + totalPages;
+      counter.textContent = `${currentPageIndex() + 1} / ${totalPages}`;
     }
 
-    function goToPage(pageIndex) {
-      const clamped = Math.max(0, Math.min(totalPages - 1, pageIndex));
+    function goToPage(index) {
+      const target = Math.max(0, Math.min(totalPages - 1, index));
       viewer.scrollTo({
-        left: clamped * window.innerWidth,
+        left: target * window.innerWidth,
         behavior: "smooth"
       });
     }
 
-    prevBtn.addEventListener("click", () => goToPage(getCurrentPage() - 1));
-    nextBtn.addEventListener("click", () => goToPage(getCurrentPage() + 1));
+    prevBtn.addEventListener("click", () => {
+      goToPage(currentPageIndex() - 1);
+    });
+
+    nextBtn.addEventListener("click", () => {
+      goToPage(currentPageIndex() + 1);
+    });
 
     viewer.addEventListener("scroll", updateCounter);
     window.addEventListener("resize", updateCounter);
     updateCounter();
 
-    viewer.addEventListener("touchstart", () => hint.classList.add("hide"), { once: true });
-    prevBtn.addEventListener("click", () => hint.classList.add("hide"), { once: true });
-    nextBtn.addEventListener("click", () => hint.classList.add("hide"), { once: true });
-    setTimeout(() => hint.classList.add("hide"), 3500);
+    const containers = document.querySelectorAll(".zoom-container");
 
     containers.forEach(container => {
       const img = container.querySelector("img");
@@ -221,12 +225,10 @@
       let startScale = 1;
       let translateX = 0;
       let translateY = 0;
-
       let startX = 0;
       let startY = 0;
       let baseTranslateX = 0;
       let baseTranslateY = 0;
-
       let pinchStartDistance = 0;
       let isDragging = false;
 
@@ -318,6 +320,5 @@
       });
     });
   </script>
-
 </body>
 </html>
