@@ -11,7 +11,7 @@
       padding: 0;
       width: 100%;
       height: 100%;
-      background: #e9e9e6;
+      background: #1c1c1a;
       overflow: hidden;
       font-family: Arial, sans-serif;
       touch-action: none;
@@ -23,7 +23,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background: #e9e9e6;
+      background: #1c1c1a;
       overflow: hidden;
     }
 
@@ -42,7 +42,6 @@
       max-height: 100vh;
       object-fit: contain;
       transform-origin: center center;
-      transition: opacity 0.18s ease;
       will-change: transform;
       user-select: none;
       -webkit-user-drag: none;
@@ -119,16 +118,11 @@
     }
 
     function updatePage() {
-      img.style.opacity = 0;
-
-      setTimeout(() => {
-        img.src = getPageSrc(currentPage);
-      }, 100);
+      img.src = getPageSrc(currentPage);
     }
 
     img.addEventListener("load", () => {
       resetZoom();
-      img.style.opacity = 1;
       preloadAdjacentPages();
     });
 
