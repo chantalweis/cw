@@ -24,7 +24,6 @@
       justify-content: center;
       align-items: center;
       background: #1c1c1a;
-      overflow: hidden;
     }
 
     .stage {
@@ -33,8 +32,6 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      overflow: hidden;
-      position: relative;
     }
 
     #pageImage {
@@ -42,23 +39,25 @@
       max-height: 100vh;
       object-fit: contain;
       transform-origin: center center;
-      will-change: transform;
       user-select: none;
-      -webkit-user-drag: none;
       pointer-events: none;
     }
   </style>
 </head>
+
 <body>
   <div class="viewer">
     <div class="stage" id="stage">
-      <img id="pageImage" src="seite__Seite_01.jpg" alt="Broschürenseite" />
+      <img id="pageImage" src="seite__Seite_01.jpg?v=2" />
     </div>
   </div>
 
   <script>
     let currentPage = 1;
     const totalPages = 35;
+
+    // 👉 WICHTIG: Version ändern wenn du Bilder updatest
+    const version = "2";
 
     const img = document.getElementById("pageImage");
     const stage = document.getElementById("stage");
@@ -68,20 +67,24 @@
     }
 
     function getPageSrc(page) {
-      return `seite__Seite_${formatNumber(page)}.jpg`;
+      return `seite__Seite_${formatNumber(page)}.jpg?v=${version}`;
     }
 
-    function preloadAdjacentPages() {
-      const next = currentPage + 1;
-      const prev = currentPage - 1;
+    function updatePage() {
+      img.src = getPageSrc(currentPage);
+    }
 
-      if (next <= totalPages) {
-        const i1 = new Image();
-        i1.src = getPageSrc(next);
+    function nextPage() {
+      if (currentPage < totalPages) {
+        currentPage++;
+        updatePage();
       }
-      if (prev >= 1) {
-        const i2 = new Image();
-        i2.src = getPageSrc(prev);
+    }
+
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        updatePage();
       }
     }
 
@@ -107,76 +110,31 @@
         return;
       }
 
-      const scaledWidth = img.clientWidth * scale;
-      const scaledHeight = img.clientHeight * scale;
-
-      const maxX = Math.max((scaledWidth - window.innerWidth) / 2, 0);
-      const maxY = Math.max((scaledHeight - window.innerHeight) / 2, 0);
+      const maxX = (img.clientWidth * scale - window.innerWidth) / 2;
+      const maxY = (img.clientHeight * scale - window.innerHeight) / 2;
 
       translateX = Math.min(Math.max(translateX, -maxX), maxX);
       translateY = Math.min(Math.max(translateY, -maxY), maxY);
     }
 
-    function updatePage() {
-      img.src = getPageSrc(currentPage);
-    }
+    // 👉 verhindert Seitenwechsel nach Zoom
+    let hasInteracted = false;
 
-    img.addEventListener("load", () => {
-      resetZoom();
-      preloadAdjacentPages();
-    });
-
-    function nextPage() {
-      if (currentPage < totalPages) {
-        currentPage++;
-        updatePage();
-      }
-    }
-
-    function prevPage() {
-      if (currentPage > 1) {
-        currentPage--;
-        updatePage();
-      }
-    }
-
-    // Klick links/rechts
-    let mouseDownX = 0;
-    let mouseDownY = 0;
-    let mouseMoved = false;
-
-    document.addEventListener("mousedown", (e) => {
-      mouseDownX = e.clientX;
-      mouseDownY = e.clientY;
-      mouseMoved = false;
-    });
-
-    document.addEventListener("mousemove", (e) => {
-      if (Math.abs(e.clientX - mouseDownX) > 8 || Math.abs(e.clientY - mouseDownY) > 8) {
-        mouseMoved = true;
-      }
-    });
-
+    // Klick Navigation
     document.addEventListener("click", (e) => {
-      if (mouseMoved || scale > 1) return;
+      if (hasInteracted || scale > 1) {
+        hasInteracted = false;
+        return;
+      }
 
       const half = window.innerWidth / 2;
-      if (e.clientX > half) {
-        nextPage();
-      } else {
-        prevPage();
-      }
+      if (e.clientX > half) nextPage();
+      else prevPage();
     });
 
-    // Touch / Swipe / Pinch
+    // Touch / Swipe / Zoom
     let touchStartX = 0;
     let touchStartY = 0;
-
-    let isDragging = false;
-    let dragStartX = 0;
-    let dragStartY = 0;
-    let startTranslateX = 0;
-    let startTranslateY = 0;
 
     let initialPinchDistance = null;
     let initialScale = 1;
@@ -188,27 +146,22 @@
     }
 
     stage.addEventListener("touchstart", (e) => {
+      hasInteracted = false;
+
       if (e.touches.length === 1) {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
-
-        if (scale > 1) {
-          isDragging = true;
-          dragStartX = e.touches[0].clientX;
-          dragStartY = e.touches[0].clientY;
-          startTranslateX = translateX;
-          startTranslateY = translateY;
-        }
       }
 
       if (e.touches.length === 2) {
         initialPinchDistance = getDistance(e.touches[0], e.touches[1]);
         initialScale = scale;
-        isDragging = false;
       }
     }, { passive: false });
 
     stage.addEventListener("touchmove", (e) => {
+      hasInteracted = true;
+
       if (e.touches.length === 2) {
         e.preventDefault();
         const newDistance = getDistance(e.touches[0], e.touches[1]);
@@ -217,54 +170,28 @@
         clampPan();
         applyTransform();
       }
-
-      if (e.touches.length === 1 && scale > 1 && isDragging) {
-        e.preventDefault();
-        translateX = startTranslateX + (e.touches[0].clientX - dragStartX);
-        translateY = startTranslateY + (e.touches[0].clientY - dragStartY);
-        clampPan();
-        applyTransform();
-      }
     }, { passive: false });
 
     stage.addEventListener("touchend", (e) => {
-      if (initialPinchDistance && e.touches.length < 2) {
-        initialPinchDistance = null;
-      }
+      if (scale > 1) return;
 
-      if (scale > 1) {
-        isDragging = false;
-        return;
-      }
-
-      if (e.changedTouches.length === 1) {
+      if (!hasInteracted && e.changedTouches.length === 1) {
         const endX = e.changedTouches[0].clientX;
-        const endY = e.changedTouches[0].clientY;
 
-        const diffX = touchStartX - endX;
-        const diffY = touchStartY - endY;
-
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
-          if (diffX > 0) nextPage();
-          else prevPage();
-          return;
-        }
-
-        const tapDistance = Math.sqrt(
-          Math.pow(endX - touchStartX, 2) + Math.pow(endY - touchStartY, 2)
-        );
-
-        if (tapDistance < 10) {
-          const half = window.innerWidth / 2;
-          if (endX > half) nextPage();
-          else prevPage();
-        }
+        const half = window.innerWidth / 2;
+        if (endX > half) nextPage();
+        else prevPage();
       }
+
+      hasInteracted = false;
     });
 
+    // Desktop Zoom
     document.addEventListener("wheel", (e) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
+
+      hasInteracted = true;
 
       const factor = e.deltaY < 0 ? 1.12 : 0.89;
       scale = Math.max(1, Math.min(scale * factor, 5));
@@ -272,38 +199,16 @@
       applyTransform();
     }, { passive: false });
 
+    // Double Click Zoom
     document.addEventListener("dblclick", (e) => {
       e.preventDefault();
-      if (scale === 1) {
-        scale = 2;
-      } else {
-        resetZoom();
-      }
+      hasInteracted = true;
+
+      if (scale === 1) scale = 2;
+      else resetZoom();
+
       clampPan();
       applyTransform();
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (scale === 1) {
-        if (e.key === "ArrowRight") nextPage();
-        if (e.key === "ArrowLeft") prevPage();
-      }
-
-      if (e.key === "+" || e.key === "=") {
-        scale = Math.min(scale * 1.15, 5);
-        clampPan();
-        applyTransform();
-      }
-
-      if (e.key === "-") {
-        scale = Math.max(scale / 1.15, 1);
-        clampPan();
-        applyTransform();
-      }
-
-      if (e.key === "0") {
-        resetZoom();
-      }
     });
 
     img.src = getPageSrc(currentPage);
