@@ -1,150 +1,337 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Broschüre</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+  <title>Cleaning Station – Chantal Weis</title>
 
-<style>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #e9e9e6;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      touch-action: none;
+    }
 
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-}
+    .viewer {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      background: #e9e9e6;
+    }
 
-html,body{
-width:100%;
-height:100%;
-overflow:hidden;
-background:#111;
-font-family:Arial, sans-serif;
-}
+    .stage {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-.viewer{
-width:100vw;
-height:100vh;
-display:flex;
-overflow-x:auto;
-scroll-snap-type:x mandatory;
--webkit-overflow-scrolling:touch;
-scroll-behavior:smooth;
-}
-
-.viewer::-webkit-scrollbar{
-display:none;
-}
-
-.page{
-flex:0 0 100vw;
-width:100vw;
-height:100vh;
-scroll-snap-align:start;
-display:flex;
-align-items:center;
-justify-content:center;
-overflow:hidden;
-}
-
-.zoom-container{
-width:100%;
-height:100%;
-display:flex;
-align-items:center;
-justify-content:center;
-overflow:hidden;
-}
-
-.zoom-container img{
-width:100%;
-height:100%;
-object-fit:contain;
-transform-origin:center center;
-user-select:none;
--webkit-user-drag:none;
-}
-
-.counter{
-position:fixed;
-bottom:18px;
-left:50%;
-transform:translateX(-50%);
-background:rgba(0,0,0,0.6);
-color:white;
-padding:8px 14px;
-border-radius:20px;
-font-size:14px;
-z-index:20;
-}
-
-/* unsichtbare Safari-Zurück Blocker */
-
-.edge-block{
-position:fixed;
-top:0;
-height:100vh;
-width:70px;
-z-index:30;
-}
-
-.edge-left{
-left:0;
-}
-
-.edge-right{
-right:0;
-}
-
-</style>
+    img {
+      max-width: 100vw;
+      max-height: 100vh;
+      object-fit: contain;
+      transform-origin: center center;
+      transition: opacity 0.18s ease;
+      will-change: transform;
+      user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none;
+    }
+  </style>
 </head>
-
 <body>
+  <div class="viewer" id="viewer">
+    <div class="stage" id="stage">
+      <img id="pageImage" src="seite_Seite_01.jpg" alt="Broschürenseite" />
+    </div>
+  </div>
 
-<div class="edge-block edge-left"></div>
-<div class="edge-block edge-right"></div>
+  <script>
+    let currentPage = 1;
+    const totalPages = 35;
 
-<div class="viewer" id="viewer">
+    const img = document.getElementById("pageImage");
+    const stage = document.getElementById("stage");
 
-<div class="page"><div class="zoom-container"><img src="seite__Seite_01.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_02.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_03.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_04.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_05.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_06.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_07.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_08.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_09.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_10.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_11.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_12.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_13.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_14.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_15.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_16.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_17.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_18.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_19.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_20.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_21.jpg"></div></div>
-<div class="page"><div class="zoom-container"><img src="seite__Seite_22.jpg"></div></div>
+    function formatNumber(num) {
+      return num < 10 ? "0" + num : String(num);
+    }
 
-</div>
+    function pageSrc(page) {
+      return `seite_Seite_${formatNumber(page)}.jpg`;
+    }
 
-<div class="counter" id="counter">1 / 22</div>
+    function preloadAdjacent() {
+      const next = currentPage + 1;
+      const prev = currentPage - 1;
 
-<script>
+      if (next <= totalPages) {
+        const imgNext = new Image();
+        imgNext.src = pageSrc(next);
+      }
+      if (prev >= 1) {
+        const imgPrev = new Image();
+        imgPrev.src = pageSrc(prev);
+      }
+    }
 
-const viewer = document.getElementById("viewer")
-const counter = document.getElementById("counter")
+    function resetZoom() {
+      scale = 1;
+      translateX = 0;
+      translateY = 0;
+      applyTransform();
+    }
 
-viewer.addEventListener("scroll", () => {
+    function updatePage() {
+      img.style.opacity = 0;
 
-let page = Math.round(viewer.scrollLeft / window.innerWidth) + 1
-counter.innerText = page + " / 22"
+      setTimeout(() => {
+        img.src = pageSrc(currentPage);
+        img.onload = () => {
+          resetZoom();
+          img.style.opacity = 1;
+          preloadAdjacent();
+        };
+      }, 100);
+    }
 
-})
+    function nextPage() {
+      if (currentPage < totalPages) {
+        currentPage++;
+        updatePage();
+      }
+    }
 
-</script>
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        updatePage();
+      }
+    }
 
+    let scale = 1;
+    let translateX = 0;
+    let translateY = 0;
+
+    function applyTransform() {
+      img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    }
+
+    function clampPan() {
+      if (scale <= 1) {
+        translateX = 0;
+        translateY = 0;
+        return;
+      }
+
+      const rect = img.getBoundingClientRect();
+      const maxX = Math.max((rect.width - window.innerWidth) / 2, 0);
+      const maxY = Math.max((rect.height - window.innerHeight) / 2, 0);
+
+      translateX = Math.min(Math.max(translateX, -maxX), maxX);
+      translateY = Math.min(Math.max(translateY, -maxY), maxY);
+    }
+
+    let clickStartX = 0;
+    let clickStartY = 0;
+    let clickMoved = false;
+
+    document.addEventListener("mousedown", (e) => {
+      clickStartX = e.clientX;
+      clickStartY = e.clientY;
+      clickMoved = false;
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (Math.abs(e.clientX - clickStartX) > 8 || Math.abs(e.clientY - clickStartY) > 8) {
+        clickMoved = true;
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (clickMoved || scale > 1) return;
+
+      const half = window.innerWidth / 2;
+      if (e.clientX > half) {
+        nextPage();
+      } else {
+        prevPage();
+      }
+    });
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let startTranslateX = 0;
+    let startTranslateY = 0;
+
+    let initialPinchDistance = null;
+    let initialScale = 1;
+    let pinchCenterX = 0;
+    let pinchCenterY = 0;
+
+    function getDistance(t1, t2) {
+      const dx = t2.clientX - t1.clientX;
+      const dy = t2.clientY - t1.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function getMidpoint(t1, t2) {
+      return {
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2
+      };
+    }
+
+    stage.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+
+        if (scale > 1) {
+          isDragging = true;
+          dragStartX = e.touches[0].clientX;
+          dragStartY = e.touches[0].clientY;
+          startTranslateX = translateX;
+          startTranslateY = translateY;
+        }
+      }
+
+      if (e.touches.length === 2) {
+        initialPinchDistance = getDistance(e.touches[0], e.touches[1]);
+        initialScale = scale;
+        const midpoint = getMidpoint(e.touches[0], e.touches[1]);
+        pinchCenterX = midpoint.x;
+        pinchCenterY = midpoint.y;
+        isDragging = false;
+      }
+    }, { passive: false });
+
+    stage.addEventListener("touchmove", (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const newDistance = getDistance(e.touches[0], e.touches[1]);
+        let nextScale = initialScale * (newDistance / initialPinchDistance);
+        nextScale = Math.max(1, Math.min(nextScale, 5));
+        scale = nextScale;
+        clampPan();
+        applyTransform();
+      }
+
+      if (e.touches.length === 1 && scale > 1 && isDragging) {
+        e.preventDefault();
+        translateX = startTranslateX + (e.touches[0].clientX - dragStartX);
+        translateY = startTranslateY + (e.touches[0].clientY - dragStartY);
+        clampPan();
+        applyTransform();
+      }
+    }, { passive: false });
+
+    stage.addEventListener("touchend", (e) => {
+      if (initialPinchDistance && e.touches.length < 2) {
+        initialPinchDistance = null;
+      }
+
+      if (scale > 1) {
+        isDragging = false;
+      }
+
+      if (scale === 1 && e.changedTouches.length === 1) {
+        touchEndX = e.changedTouches[0].clientX;
+        touchEndY = e.changedTouches[0].clientY;
+
+        const diffX = touchStartX - touchEndX;
+        const diffY = touchStartY - touchEndY;
+
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+          if (diffX > 0) {
+            nextPage();
+          } else {
+            prevPage();
+          }
+          return;
+        }
+
+        const tapDistance = Math.sqrt(
+          Math.pow(touchEndX - touchStartX, 2) + Math.pow(touchEndY - touchStartY, 2)
+        );
+
+        if (tapDistance < 10) {
+          const half = window.innerWidth / 2;
+          if (touchEndX > half) {
+            nextPage();
+          } else {
+            prevPage();
+          }
+        }
+      }
+    });
+
+    document.addEventListener("wheel", (e) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+
+      const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
+      scale = Math.max(1, Math.min(scale * zoomFactor, 5));
+      clampPan();
+      applyTransform();
+    }, { passive: false });
+
+    document.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      if (scale === 1) {
+        scale = 2;
+      } else {
+        scale = 1;
+        translateX = 0;
+        translateY = 0;
+      }
+      clampPan();
+      applyTransform();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" && scale === 1) nextPage();
+      if (e.key === "ArrowLeft" && scale === 1) prevPage();
+
+      if ((e.key === "+" || e.key === "=")) {
+        scale = Math.min(scale * 1.15, 5);
+        clampPan();
+        applyTransform();
+      }
+
+      if (e.key === "-") {
+        scale = Math.max(scale / 1.15, 1);
+        clampPan();
+        applyTransform();
+      }
+
+      if (e.key === "0") {
+        resetZoom();
+      }
+    });
+
+    img.addEventListener("load", () => {
+      preloadAdjacent();
+    });
+
+    updatePage();
+  </script>
 </body>
 </html>
