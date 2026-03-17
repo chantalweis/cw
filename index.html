@@ -24,6 +24,7 @@
       justify-content: center;
       align-items: center;
       background: #1c1c1a;
+      overflow: hidden;
     }
 
     .stage {
@@ -32,30 +33,42 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      overflow: hidden;
+      position: relative;
+      cursor: default;
     }
 
     #pageImage {
+      display: block;
       max-width: 100vw;
       max-height: 100vh;
+      width: auto;
+      height: auto;
       object-fit: contain;
       transform-origin: center center;
+      will-change: transform;
       user-select: none;
       -webkit-user-drag: none;
       pointer-events: none;
+      image-rendering: auto;
+      backface-visibility: hidden;
     }
   </style>
 </head>
 <body>
   <div class="viewer">
     <div class="stage" id="stage">
-      <img id="pageImage" src="seite__Seite_01.jpg?v=3" alt="Broschürenseite" />
+      <img id="pageImage" src="seite__Seite_01.jpg" alt="Broschürenseite" />
     </div>
   </div>
 
   <script>
     let currentPage = 1;
     const totalPages = 35;
-    const version = "3";
+
+    // Nur geänderte Seiten hier eintragen:
+    const updatedPages = [12, 18, 27];
+    const updatedVersion = "2";
 
     const img = document.getElementById("pageImage");
     const stage = document.getElementById("stage");
@@ -65,7 +78,73 @@
     }
 
     function getPageSrc(page) {
-      return `seite__Seite_${formatNumber(page)}.jpg?v=${version}`;
+      const version = updatedPages.includes(page) ? `?v=${updatedVersion}` : "";
+      return `seite__Seite_${formatNumber(page)}.jpg${version}`;
+    }
+
+    function preloadAdjacentPages() {
+      const next = currentPage + 1;
+      const prev = currentPage - 1;
+
+      if (next <= totalPages) {
+        const i1 = new Image();
+        i1.src = getPageSrc(next);
+      }
+      if (prev >= 1) {
+        const i2 = new Image();
+        i2.src = getPageSrc(prev);
+      }
+    }
+
+    let scale = 1;
+    let translateX = 0;
+    let translateY = 0;
+
+    let isPointerDown = false;
+    let pointerMoved = false;
+    let startX = 0;
+    let startY = 0;
+    let startTranslateX = 0;
+    let startTranslateY = 0;
+
+    let initialPinchDistance = null;
+    let initialScale = 1;
+    let isPinching = false;
+
+    function applyTransform() {
+      img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    }
+
+    function resetZoom() {
+      scale = 1;
+      translateX = 0;
+      translateY = 0;
+      applyTransform();
+    }
+
+    function getBounds() {
+      const rect = img.getBoundingClientRect();
+      const baseW = rect.width / scale;
+      const baseH = rect.height / scale;
+      const scaledW = baseW * scale;
+      const scaledH = baseH * scale;
+
+      const maxX = Math.max((scaledW - window.innerWidth) / 2, 0);
+      const maxY = Math.max((scaledH - window.innerHeight) / 2, 0);
+
+      return { maxX, maxY };
+    }
+
+    function clampPan() {
+      if (scale <= 1) {
+        translateX = 0;
+        translateY = 0;
+        return;
+      }
+
+      const { maxX, maxY } = getBounds();
+      translateX = Math.min(Math.max(translateX, -maxX), maxX);
+      translateY = Math.min(Math.max(translateY, -maxY), maxY);
     }
 
     function updatePage() {
@@ -86,67 +165,59 @@
       }
     }
 
-    let scale = 1;
-    let translateX = 0;
-    let translateY = 0;
+    img.addEventListener("load", () => {
+      resetZoom();
+      preloadAdjacentPages();
+    });
 
-    function applyTransform() {
-      img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-    }
-
-    function resetZoom() {
-      scale = 1;
-      translateX = 0;
-      translateY = 0;
-      applyTransform();
-    }
-
-    function clampPan() {
-      if (scale <= 1) {
-        translateX = 0;
-        translateY = 0;
-        return;
-      }
-
-      const maxX = Math.max((img.clientWidth * scale - window.innerWidth) / 2, 0);
-      const maxY = Math.max((img.clientHeight * scale - window.innerHeight) / 2, 0);
-
-      translateX = Math.min(Math.max(translateX, -maxX), maxX);
-      translateY = Math.min(Math.max(translateY, -maxY), maxY);
-    }
-
-    let mouseDownX = 0;
-    let mouseDownY = 0;
-    let mouseMoved = false;
-
+    // Desktop: Klick links/rechts nur wenn nicht gezoomt
     document.addEventListener("mousedown", (e) => {
-      mouseDownX = e.clientX;
-      mouseDownY = e.clientY;
-      mouseMoved = false;
+      if (scale > 1) {
+        isPointerDown = true;
+        pointerMoved = false;
+        startX = e.clientX;
+        startY = e.clientY;
+        startTranslateX = translateX;
+        startTranslateY = translateY;
+      } else {
+        isPointerDown = true;
+        pointerMoved = false;
+        startX = e.clientX;
+        startY = e.clientY;
+      }
     });
 
     document.addEventListener("mousemove", (e) => {
-      if (Math.abs(e.clientX - mouseDownX) > 8 || Math.abs(e.clientY - mouseDownY) > 8) {
-        mouseMoved = true;
+      if (!isPointerDown) return;
+
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+        pointerMoved = true;
+      }
+
+      if (scale > 1) {
+        translateX = startTranslateX + dx;
+        translateY = startTranslateY + dy;
+        clampPan();
+        applyTransform();
       }
     });
 
+    document.addEventListener("mouseup", () => {
+      isPointerDown = false;
+    });
+
     document.addEventListener("click", (e) => {
-      if (mouseMoved || scale > 1) return;
+      if (scale > 1 || pointerMoved) return;
 
       const half = window.innerWidth / 2;
       if (e.clientX > half) nextPage();
       else prevPage();
     });
 
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchMoved = false;
-    let isPinching = false;
-
-    let initialPinchDistance = null;
-    let initialScale = 1;
-
+    // Touch helpers
     function getDistance(t1, t2) {
       const dx = t2.clientX - t1.clientX;
       const dy = t2.clientY - t1.clientY;
@@ -154,17 +225,20 @@
     }
 
     stage.addEventListener("touchstart", (e) => {
-      if (e.touches.length === 1) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchMoved = false;
-        isPinching = false;
-      }
-
       if (e.touches.length === 2) {
         isPinching = true;
         initialPinchDistance = getDistance(e.touches[0], e.touches[1]);
         initialScale = scale;
+        return;
+      }
+
+      if (e.touches.length === 1) {
+        isPointerDown = true;
+        pointerMoved = false;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        startTranslateX = translateX;
+        startTranslateY = translateY;
       }
     }, { passive: false });
 
@@ -172,30 +246,44 @@
       if (e.touches.length === 2) {
         e.preventDefault();
         isPinching = true;
-
         const newDistance = getDistance(e.touches[0], e.touches[1]);
         scale = initialScale * (newDistance / initialPinchDistance);
-        scale = Math.max(1, Math.min(scale, 5));
+        scale = Math.max(1, Math.min(scale, 6));
         clampPan();
         applyTransform();
         return;
       }
 
-      if (e.touches.length === 1) {
-        const dx = e.touches[0].clientX - touchStartX;
-        const dy = e.touches[0].clientY - touchStartY;
+      if (e.touches.length === 1 && isPointerDown) {
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
 
-        if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
-          touchMoved = true;
+        if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+          pointerMoved = true;
+        }
+
+        if (scale > 1) {
+          e.preventDefault();
+          translateX = startTranslateX + dx;
+          translateY = startTranslateY + dy;
+          clampPan();
+          applyTransform();
         }
       }
     }, { passive: false });
 
     stage.addEventListener("touchend", (e) => {
       if (isPinching) {
-        isPinching = false;
+        if (e.touches.length < 2) {
+          isPinching = false;
+          initialPinchDistance = null;
+        }
+        isPointerDown = false;
         return;
       }
+
+      if (!isPointerDown) return;
+      isPointerDown = false;
 
       if (scale > 1) return;
       if (e.changedTouches.length !== 1) return;
@@ -203,51 +291,73 @@
       const endX = e.changedTouches[0].clientX;
       const endY = e.changedTouches[0].clientY;
 
-      const diffX = touchStartX - endX;
-      const diffY = touchStartY - endY;
+      const diffX = startX - endX;
+      const diffY = startY - endY;
 
+      // Swipe
       if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
         if (diffX > 0) nextPage();
         else prevPage();
         return;
       }
 
+      // Tap
       const tapDistance = Math.sqrt(
-        Math.pow(endX - touchStartX, 2) + Math.pow(endY - touchStartY, 2)
+        Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2)
       );
 
-      if (!touchMoved && tapDistance < 10) {
+      if (!pointerMoved && tapDistance < 10) {
         const half = window.innerWidth / 2;
         if (endX > half) nextPage();
         else prevPage();
       }
     });
 
+    // Desktop Zoom
     document.addEventListener("wheel", (e) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
 
       const factor = e.deltaY < 0 ? 1.12 : 0.89;
-      scale = Math.max(1, Math.min(scale * factor, 5));
+      scale = Math.max(1, Math.min(scale * factor, 6));
       clampPan();
       applyTransform();
     }, { passive: false });
 
+    // Doppelklick Zoom
     document.addEventListener("dblclick", (e) => {
       e.preventDefault();
-
-      if (scale === 1) scale = 2;
-      else resetZoom();
-
+      if (scale === 1) {
+        scale = 2;
+      } else {
+        resetZoom();
+        return;
+      }
       clampPan();
       applyTransform();
     });
 
-    img.addEventListener("load", () => {
+    // Tastatur
+    document.addEventListener("keydown", (e) => {
       if (scale === 1) {
-        translateX = 0;
-        translateY = 0;
+        if (e.key === "ArrowRight") nextPage();
+        if (e.key === "ArrowLeft") prevPage();
+      }
+
+      if (e.key === "+" || e.key === "=") {
+        scale = Math.min(scale * 1.15, 6);
+        clampPan();
         applyTransform();
+      }
+
+      if (e.key === "-") {
+        scale = Math.max(scale / 1.15, 1);
+        clampPan();
+        applyTransform();
+      }
+
+      if (e.key === "0") {
+        resetZoom();
       }
     });
 
