@@ -53,7 +53,7 @@
 <body>
   <div class="viewer">
     <div class="stage" id="stage">
-      <img id="pageImage" src="seite_Seite_01.jpg" alt="Broschürenseite" />
+      <img id="pageImage" src="seite__Seite_01.jpg" alt="Broschürenseite" />
     </div>
   </div>
 
@@ -69,7 +69,7 @@
     }
 
     function getPageSrc(page) {
-      return `seite_Seite_${formatNumber(page)}.jpg`;
+      return `seite__Seite_${formatNumber(page)}.jpg`;
     }
 
     function preloadAdjacentPages() {
@@ -251,11 +251,8 @@
         const diffY = touchStartY - endY;
 
         if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
-          if (diffX > 0) {
-            nextPage();
-          } else {
-            prevPage();
-          }
+          if (diffX > 0) nextPage();
+          else prevPage();
           return;
         }
 
@@ -265,16 +262,12 @@
 
         if (tapDistance < 10) {
           const half = window.innerWidth / 2;
-          if (endX > half) {
-            nextPage();
-          } else {
-            prevPage();
-          }
+          if (endX > half) nextPage();
+          else prevPage();
         }
       }
     });
 
-    // Desktop-Zoom mit Ctrl + Mausrad
     document.addEventListener("wheel", (e) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
@@ -285,7 +278,6 @@
       applyTransform();
     }, { passive: false });
 
-    // Doppelklick zoomt
     document.addEventListener("dblclick", (e) => {
       e.preventDefault();
       if (scale === 1) {
@@ -297,7 +289,6 @@
       applyTransform();
     });
 
-    // Tastatur
     document.addEventListener("keydown", (e) => {
       if (scale === 1) {
         if (e.key === "ArrowRight") nextPage();
@@ -321,7 +312,6 @@
       }
     });
 
-    // Start
     img.src = getPageSrc(currentPage);
   </script>
 </body>
